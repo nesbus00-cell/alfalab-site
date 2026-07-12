@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ألفا لاب للتحاليل الطبية</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            /* ألوان هوية ألفا لاب (الكحلي والأحمر) */
+            --primary: #1b365d; 
+            --primary-dark: #0f203b;
+            --accent: #e31837;
+            --accent-hover: #c0142e;
+            --bg-main: #f0f4f8;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --success: #16a34a;
+            --danger: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #dbe8f5 0%, #eef2f9 40%, #f5e9ec 100%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* الملاحة والعناوين */
+        header {
+            background: linear-gradient(135deg, rgba(15, 32, 59, 0.75), rgba(27, 54, 93, 0.75));
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            color: white;
+            padding: 22px 45px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-container {
+            background: white;
+            padding: 5px;
+            border-radius: 10px;
+            height: 65px;
+            width: 65px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .lab-logo {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        .header-titles h1 {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 3px;
+            letter-spacing: 0.5px;
+        }
+
+        .header-titles p {
+            font-size: 13px;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+
+        .dr-badge {
+            background: linear-gradient(45deg, var(--accent), #ff4b5c);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 15px;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 6px rgba(227, 24, 55, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(227, 24, 55, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(227, 24, 55, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(227, 24, 55, 0); }
+        }
+
+        nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: white;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* الحاوية الرئيسية */
+        .main-container {
+            flex: 1;
+            max-width: 1400px;
+            width: 100%;
+            margin: 50px auto;
+            padding: 0 40px;
+        }
+
+        .page-view {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .page-view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* واجهة البحث (المستخدم) */
+        .search-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .search-box-wrapper {
+            position: relative;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 20px 28px;
+            font-size: 19px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+            color: var(--primary-dark);
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 10px 25px rgba(27, 54, 93, 0.15);
+        }
+        
+        .search-input::placeholder {
+            color: #94a3b8;
+            font-weight: normal;
+        }
+
+        /* بطاقات النتائج */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+
+        @media (max-width: 1000px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .result-card {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
+            border-right: 8px solid var(--accent);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent), var(--primary));
+            opacity: 0.1;
+        }
+
+        .result-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        .card-header {
+            display: flex;
+            flex-direction: row-reverse;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px dashed #e2e8f0;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .diagnosis-title {
+            font-size: 22px;
+            color: var(--primary-dark);
+            font-weight: 800;
+            flex: 1 1 auto;
+            min-width: 150px;
+        }
+
+        .profile-badge {
+            background-color: #e0f2fe;
+            color: var(--primary-dark);
+            padding: 8px 18px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            border: 1px solid #bae6fd;
+            line-height: 1.6;
+            max-width: 100%;
+        }
+
+        @media (max-width: 480px) {
+            .card-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .profile-badge {
+                text-align: center;
+            }
+        }
+
+        /* ===== أزرار كود البروفايل (كل كود له زرار نسخ مستقل) ===== */
+        .code-actions {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 22px;
+            padding: 14px 16px;
+            background-color: #f8fafc;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .code-chip-btn {
+            border: 1px solid var(--primary);
+            background-color: white;
+            color: var(--primary-dark);
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            font-family: 'Courier New', monospace;
+            min-height: 40px;
+        }
+
+        .code-chip-btn:hover {
+            background-color: var(--primary);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .code-chip-btn.copied {
+            background-color: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .no-code-label {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .info-block {
+            margin-bottom: 20px;
+        }
+
+        .info-label {
+            font-size: 15px;
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            line-height: 1.7;
+            color: #334155;
+        }
+
+        .upsell-box {
+            background-color: #fff1f2;
+            border: 1px dashed #fecdd3;
+            padding: 14px 16px;
+            border-radius: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .test-chip {
+            display: inline-block;
+            background-color: #ffe4e6;
+            border: 1px solid #fda4af;
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 15px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        /* التوجيه العلمي: نحافظ على فواصل الأسطر والفقرات كما كُتبت في لوحة الإدارة */
+        .scientific-box {
+            font-style: normal;
+            background: #f8fafc;
+            padding: 18px 20px;
+            border-radius: 8px;
+            border-right: 4px solid var(--primary);
+            white-space: pre-wrap;
+            line-height: 2;
+        }
+        .scientific-box b, .scientific-box strong { color: var(--primary-dark); }
+
+        /* واجهة التطوير والإدارة */
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+            header {
+                flex-direction: column;
+                text-align: center;
+            }
+            .logo-section {
+                flex-direction: column;
+            }
+        }
+
+        .admin-card {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+        }
+
+        .admin-card h2 {
+            font-size: 20px;
+            margin-bottom: 25px;
+            color: var(--primary-dark);
+            border-bottom: 3px solid var(--bg-main);
+            padding-bottom: 15px;
+            font-weight: 800;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+            background-color: #f8fafc;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            background-color: white;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* ===== محرر النصوص الغني (Bold/Italic/Color) ===== */
+        .rich-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background-color: #eef2f7;
+            border: 2px solid var(--border);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            padding: 6px 8px;
+        }
+
+        .rt-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--border);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .rt-btn:hover {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .rt-color-label {
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--border);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rt-color-label input[type="color"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .rich-editor {
+            min-height: 160px;
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 0 0 8px 8px !important;
+            line-height: 1.9;
+            white-space: pre-wrap;
+        }
+
+        .rich-editor:empty:before {
+            content: attr(data-placeholder);
+            color: #94a3b8;
+            pointer-events: none;
+        }
+
+        body.dark-mode .rich-toolbar { background-color: #0f172a; border-color: #334155; }
+        body.dark-mode .rt-btn, body.dark-mode .rt-color-label { background-color: #1e293b; border-color: #334155; color: #e2e8f0; }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+        }
+        .btn-danger:hover {
+            background-color: #b91c1c;
+        }
+
+        .btn-accent {
+            background-color: var(--accent);
+        }
+        .btn-accent:hover {
+            background-color: var(--accent-hover);
+        }
+
+        /* جدول البيانات المعروضة */
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: right;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: var(--primary);
+            color: white;
+            font-weight: 700;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            font-size: 13px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+        }
+
+        .action-btn.edit {
+            background-color: #e0f2fe;
+            color: var(--primary-dark);
+        }
+        .action-btn.edit:hover { background-color: #bae6fd; }
+
+        .action-btn.delete {
+            background-color: #fee2e2;
+            color: var(--danger);
+        }
+        .action-btn.delete:hover {
+            background-color: #fca5a5;
+        }
+
+        /* نافذة الحماية بكلمة مرور */
+        .auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 32, 59, 0.8);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .auth-box {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            border-top: 5px solid var(--accent);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* الفوتر / التوقيع */
+        .footer {
+            text-align: center;
+            padding: 25px 20px 20px;
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: auto;
+            font-weight: 500;
+        }
+        .footer span {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .credits-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .credit-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .credit-chip .credit-role {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .credit-chip .credit-name {
+            color: var(--accent);
+            font-weight: 800;
+        }
+
+        body.dark-mode .credit-chip {
+            background: rgba(30, 41, 59, 0.55);
+            border-color: rgba(51, 65, 85, 0.6);
+            color: #e2e8f0;
+        }
+        body.dark-mode .credit-chip .credit-role { color: #94a3b8; }
+
+        /* ===== DARK MODE ===== */
+        body.dark-mode {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --primary: #3b6cb7;
+            --primary-dark: #1e3a5f;
+            background: linear-gradient(135deg, #0b1524 0%, #0f172a 50%, #150f1c 100%);
+            background-attachment: fixed;
+        }
+        body.dark-mode header {
+            background: linear-gradient(135deg, rgba(6,15,30,0.75), rgba(15,32,59,0.75));
+        }
+        body.dark-mode .search-input {
+            background: rgba(30, 41, 59, 0.55);
+            color: #e2e8f0;
+            border-color: #334155;
+        }
+        body.dark-mode .search-input::placeholder { color: #64748b; }
+        body.dark-mode .result-card { background: rgba(30, 41, 59, 0.55); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-color: rgba(51, 65, 85, 0.6); }
+        body.dark-mode .admin-card { background: rgba(30, 41, 59, 0.55); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-color: rgba(51, 65, 85, 0.6); }
+        body.dark-mode .form-control { background-color: #0f172a; color: #e2e8f0; border-color: #334155; }
+        body.dark-mode .form-control:focus { background-color: #1e293b; }
+        body.dark-mode th { background-color: #0f172a; }
+        body.dark-mode tr:hover { background-color: #273548; }
+        body.dark-mode td { color: #cbd5e1; }
+        body.dark-mode .profile-badge { background-color: #1e3a5f; border-color: #3b6cb7; color: #93c5fd; }
+        body.dark-mode .upsell-box { background-color: rgba(45, 21, 32, 0.55); border-color: #7f1d1d; }
+        body.dark-mode .test-chip { background-color: #3f1723; border-color: #7f1d1d; color: #fda4af; }
+        body.dark-mode .scientific-box { background-color: rgba(15, 23, 42, 0.6) !important; color: #cbd5e1; }
+        body.dark-mode .code-actions { background-color: rgba(15, 23, 42, 0.6); border-color: #334155; }
+        body.dark-mode .code-chip-btn { background-color: #1e293b; border-color: #3b6cb7; color: #e2e8f0; }
+        body.dark-mode .info-value { background-color: #0f172a !important; color: #cbd5e1; }
+        body.dark-mode .auth-box { background: #1e293b; color: #e2e8f0; }
+        body.dark-mode .auth-box h3 { color: #e2e8f0; }
+        body.dark-mode .table-wrapper { border-color: #334155; }
+
+        /* ===== CLOCK & DARK TOGGLE IN HEADER ===== */
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .dark-toggle {
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        .dark-toggle:hover {
+            background: rgba(255,255,255,0.25);
+            transform: rotate(20deg) scale(1.1);
+        }
+
+        /* ===== Results Count Badge ===== */
+        .results-count {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .results-count span {
+            background: var(--accent);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            margin-right: 5px;
+        }
+
+        /* ===== Welcome Banner ===== */
+        .welcome-banner {
+            background: linear-gradient(135deg, rgba(15,32,59,0.65), rgba(27,54,93,0.65));
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            color: white;
+            border-radius: 15px;
+            padding: 25px 35px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 8px 25px rgba(27,54,93,0.15);
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .welcome-banner .banner-icon { font-size: 45px; }
+        .welcome-banner h2 { font-size: 20px; margin-bottom: 5px; }
+        .welcome-banner p { font-size: 14px; opacity: 0.85; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-section">
+            <div class="logo-container">
+                <img src="data:image/png;base64,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" alt="ألفا لاب للتحاليل الطبية" class="lab-logo">
+            </div>
+            <div class="header-titles">
+                <h1>الفا لاب للتحاليل الطبيه</h1>
+                <p>للتحاليل الطبية المتخصصة</p>
+            </div>
+        </div>
+        
+        <div class="dr-badge">
+            👩‍⚕️ BY DR/THORAYYA
+        </div>
+
+        <div class="header-controls">
+            <button class="dark-toggle" id="darkToggleBtn" onclick="toggleDarkMode()" title="تبديل الوضع الليلي">🌙</button>
+            <nav>
+                <button class="nav-btn active" onclick="switchView('user')">شاشة الاستقبال</button>
+                <button class="dark-toggle" id="adminAccessBtn" onclick="checkAdminAuth()" title="دخول فني">⚙️</button>
+            </nav>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <!-- ================= شاشة المستخدم والبحث ================= -->
+        <div id="userView" class="page-view active">
+            <div id="syncStatus" style="text-align:center; font-size:13px; padding:8px; margin-bottom:15px; border-radius:8px; font-weight:600;">
+                ⏳ جاري الاتصال بقاعدة البيانات...
+            </div>
+            <div class="welcome-banner">
+                <div class="banner-icon">🔬</div>
+                <div>
+                    <h2>أهلاً بك في ألفا لاب للتحاليل الطبية</h2>
+                    <p>ابحث عن أي تشخيص طبي وستحصل فوراً على البروفايل المناسب والفحوصات الإضافية الموصى بها</p>
+                </div>
+            </div>
+            <div class="search-section">
+                <div class="search-box-wrapper">
+                    <input type="text" id="searchInput" class="search-input" placeholder="🔍 اكتب اسم التشخيص الطبي هنا للبحث التلقائي...">
+                </div>
+            </div>
+            <div class="results-count" id="resultsCount" style="display:none;">
+                نتائج البحث: <span id="resultsNumber">0</span>
+            </div>
+            <div id="resultsContainer" class="results-grid">
+                <!-- النتائج تظهر هنا ديناميكياً -->
+            </div>
+        </div>
+
+        <!-- ================= لوحة التطوير والإدارة ================= -->
+        <div id="adminView" class="page-view">
+            <div class="admin-grid">
+                
+                <!-- نموذج الإدخال والتحديث -->
+                <div class="admin-card">
+                    <h2>⚙️ إضافة أو تحديث البيانات التشخيصية</h2>
+                    <form id="dataForm" onsubmit="handleFormSubmit(event)">
+                        <input type="hidden" id="editIndex" value="">
+                        <div class="form-group">
+                            <label for="diagnosis">التشخيص الطبي (Diagnosis)</label>
+                            <input type="text" id="diagnosis" class="form-control" required placeholder="مثال: Diabetes Mellitus">
+                        </div>
+                        <div class="form-group">
+                            <label for="profile">البروفايل المرشح الأساسي (Profile)</label>
+                            <input type="text" id="profile" class="form-control" required placeholder="مثال: Diabetic Profile - Full">
+                        </div>
+                        <div class="form-group">
+                            <label for="code">كود البروفايل (Profile Code)</label>
+                            <input type="text" id="code" class="form-control" placeholder="مثال: DBT-001">
+                        </div>
+                        <div class="form-group">
+                            <label for="upsell">الترشيحات الإضافية الذكية (Upselling)</label>
+                            <input type="text" id="upsell" class="form-control" required placeholder="مثال: HbA1c, Microalbuminuria, Lipid Profile">
+                        </div>
+                        <div class="form-group">
+                            <label for="scientific">الجانب العلمي والتبرير الطبي للمريض</label>
+                            <div class="rich-toolbar">
+                                <button type="button" class="rt-btn" onmousedown="event.preventDefault()" onclick="formatSci('bold')" title="غامق (Bold)"><b>B</b></button>
+                                <button type="button" class="rt-btn" onmousedown="event.preventDefault()" onclick="formatSci('italic')" title="مائل (Italic)"><i>I</i></button>
+                                <button type="button" class="rt-btn" onmousedown="event.preventDefault()" onclick="formatSci('underline')" title="تسطير"><u>U</u></button>
+                                <label class="rt-color-label" title="لون الخط">
+                                    🎨
+                                    <input type="color" id="sciColorPicker" onmousedown="event.preventDefault()" onchange="formatSci('foreColor', this.value)" value="#1b365d">
+                                </label>
+                                <button type="button" class="rt-btn" onmousedown="event.preventDefault()" onclick="formatSci('insertUnorderedList')" title="نقاط">•≡</button>
+                                <button type="button" class="rt-btn" onmousedown="event.preventDefault()" onclick="formatSci('removeFormat')" title="إزالة كل التنسيق">✕</button>
+                            </div>
+                            <div id="scientific" class="form-control rich-editor" contenteditable="true" data-placeholder="اكتب التبرير العلمي الطبي المبسط الذي يساعد موظف الاستقبال على شرح الأهمية للمريض..."></div>
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top: 20px;">
+                            <button type="submit" class="btn" id="submitBtn">حفظ المدخلات</button>
+                            <button type="button" class="btn" style="background-color:#94a3b8;" onclick="resetForm()">إلغاء</button>
+                        </div>
+                    </form>
+                    
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border);">
+                        <h2 style="font-size:16px; margin-bottom:15px; color: var(--text-main);">نسخ احتياطي واستيراد البيانات</h2>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-accent" onclick="exportData()">📥 تصدير البيانات JSON</button>
+                            <button class="btn" style="background-color: #475569;" onclick="document.getElementById('importFile').click()">📤 استيراد ملف JSON</button>
+                            <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- جدول عرض وتصفية وتنظيف قاعدة البيانات -->
+                <div class="admin-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h2 style="margin:0; border:none; padding:0;">السجلات الحالية (<span id="recordCount">0</span>)</h2>
+                        <button class="btn btn-danger" style="padding:8px 15px; font-size:13px;" onclick="clearDuplicates()">✨ تنظيف التكرار</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>التشخيص</th>
+                                    <th>البروفايل</th>
+                                    <th>الكود</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTableBody">
+                                <!-- السجلات تظهر هنا -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- نافذة طلب كلمة المرور لصفحة التطوير -->
+    <div id="authModal" class="auth-overlay hidden">
+        <div class="auth-box">
+            <div style="font-size: 40px; margin-bottom: 10px;">🔒</div>
+            <h3 style="margin-bottom:25px; color:var(--primary-dark); font-weight: 800;">تسجيل الدخول للإدارة</h3>
+            <input type="password" id="adminPassword" class="form-control" style="text-align:center; margin-bottom:20px; font-size: 18px; padding: 15px;" placeholder="أدخل كلمة المرور">
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button class="btn" style="width: 100%;" onclick="verifyAdminPassword()">دخول آمن</button>
+                <button class="btn" style="background-color:#94a3b8; width: 100%;" onclick="closeAuthModal()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        تم تطوير النظام خصيصاً لصالح <span>ألفا لاب للتحاليل الطبية</span>
+        <div class="credits-bar">
+            <div class="credit-chip">💡 <span class="credit-role">فكرة:</span> <span class="credit-name">Thorayya Abouelfotoh</span></div>
+            <div class="credit-chip">⚙️ <span class="credit-role">تنفيذ:</span> <span class="credit-name">Pola Michel</span></div>
+        </div>
+    </footer>
+
+    <script>
+        // بيانات افتراضية أولية لتبدأ المنظومة بالعمل فوراً
+        const defaultDatabase = [
+            {
+                        "diagnosis": "Diabetes Mellitus",
+                        "profile": "Diabetic Profile Comprehensive",
+                        "code": "DBT-001",
+                        "upsell": "HbA1c, Microalbumin in Urine, Creatinine, Lipid Profile",
+                        "scientific": "متابعة مستوى السكر التراكمي لبيان مدى الانضباط خلال 3 أشهر، وفحص الكلى المبكر عبر زلال البول الدقيق، والاطمئنان على الكوليسترول لتفادي مضاعفات الأوعية الدموية."
+            },
+            {
+                        "diagnosis": "Anemia / Fatigue",
+                        "profile": "Anemia Screen Profile",
+                        "code": "ANM-001",
+                        "upsell": "CBC, Serum Iron, Ferritin, Vitamin B12, Reticulocytes",
+                        "scientific": "تحديد النوع الدقيق للأنيميا (نقص حديد أو نقص فيتامينات) لضمان أخذ العلاج الصحيح، حيث أن الهيموجلوبين وحده لا يعبر عن حجم المخزون الفعلي في الجسم."
+            },
+            {
+                        "diagnosis": "ارهاق   تعب من اقل مجهود  ضربات قلب سريعة  شحوب بالوجه  صداع",
+                        "profile": "الصداع المزمن. الانهاك والتعب 2    ,small checkup3,4.  الرياضيين",
+                        "code": "1122p -   778899p -  50054p - 50053p  - 11123p",
+                        "upsell": "CBC/ Ferritin /KFT/ LFT/ Hba1c/ VIT D/ TSH/ FT3/FT4/ Zinc/ CA /Mg",
+                        "scientific": "<b>Vit.D</b>:  الناس فاكراه بتاع العضم بس <div>هو في الحقيقة هرمون بيتحكم في 3000 جين في جسمك </div><div>1- العضم والكالسيوم : هو الل بيخلي  الامعاء تمتص الكالسيوم من الاكل </div><div>2-المناعة </div><div>بيقلل الالتهابات المزمنة بيقوي المناعة  ضد البرد والانفلونزا</div><div><br></div>"
+            },
+            {
+                        "diagnosis": "تعب  مناعة ضعيفة جروح مش بتلم  ضعف الشهية لسان ملتهب  تنميل التهابات",
+                        "profile": "ViTamins profile/  Vitamins and minirals/  Med checkup / فحوصات السمنه",
+                        "code": "50055p   - 99887p- 2902p  -  7780p",
+                        "upsell": "Homa test / vit d/ vit b12/ folic acid/ zinc/ Mag/ ferritin / CBC /HBA1c / ANA/ CRP./ LFT/KFT/ TSH",
+                        "scientific": "<u><b>Zinc: </b></u>معدن صغير بس بيعمل شغل كبير المناعة وهي خط الدفاع الاول نقصه بيزود تكرار البرد وجروح بتتأخر في الالتئام وليه اهمية في حاسة الشم والتذوق ولذلك كان مطلوب أخذه في حالات الكورونا <br>----------------------------------------<br><b>فيتامين B12:</b> فيتامين الاعصاب والدم <br>1-بيحمي غلاف الاعصاب ولذلك نقصه يسبب تنميل في اليد والقدم ودوخة وحرقان ومهم اخذه لمريض السكر <br>2-بيصنع كرات الدم الحمراء لذلك نقصه يسبب انيميا تعب ونهجان <br>3- مهم في الذاكرة والتركيز ونقصه يسبب توهان وعدم تركيز <br>4-مرضي السكر معرضين لنقص b12 وخصوصا لو بياخدوا ميتفورمين فترة طويلة عشان بيقلل امتصاصه <br>-------------------------<br><b>Folic acid  B9</b>: مع b12 بيحافظ علي غلاف الاعصاب وبيدخل في تكوين كرات الدم الحمراء <br>2-تجديد الخلايا اي خلايا بتتجدد بسرعة محتاجاه الشعر والجلد بطانة المعدة عشان كدة نقصه يسبب تقرحات في الفم<br>3- للحوامل  بيمنع تشوهات الاجنة في العمود الفقري والمخ  عشان كدة لازم قبل الحمل ب3 شهور <br>4- للقلب بيقلل مادة Homocystien اللي بتعمل جلطات ومهم لمريض السكر والضغط"
+            },
+            {
+                        "diagnosis": "سمنة مفرطة ثبات الوزن حرق ضعيف او حرق سريع شراهة للسكر  زيادة التهابات بطن سفلي ضعف عام  ضبابية في التفكير جوع مستمر غمقان في الرقبة وتحت الابط زوائد جلدية",
+                        "profile": "السمنة المفرطة / فحوصات السمنة/ متابعة بعد جراحات السمنة / متابعة نقص الوزن الدايت  Metabolic Balance profile",
+                        "code": "5555p  - 2902p - 2904p - 2901p- 531415p",
+                        "upsell": "/Anti thyroid AB  VitD ViT B12 / Iron / HBA1c /Cortisol / LFT/  KFT./ CBC/ Homa test/ Lipid profile /Ferrtin /TSH/ FT3/Ft4",
+                        "scientific": "<b> Homa- IR :  </b>بتخلي الجسم يخزن دهون وماينزلش <br>2- الكورتيزول الصباحي بيسبب تخزين الدهون واحتباس مياه والكبد الدهني بيقلل الحرق والكلي لو فيها مشكلة بتحبس مياه <br>تعالوا بقي اشرحلكم <i style=\"\"><u style=\"\"><b>مقاومة انسولين :</b></u></i><br>الانسولين ده مفتاح وظيفته يدخل السكر من الدم للخلايا عشان تتحرق طاقة<br>مقاومة انسولين بقي يعني الخلايا قفلت الباب في وش المفتاح فالبنكرياس يفرز انسولين اكتر واكتر والسكر يفضل عالي والجسم يخزن دهون ومنه بنكشف السكر قبل مايجي ب10 سنين لو المقاومة عالي والسكر الصايم والتراكمي مظبوطين فبنلحقه <br>يفضل عدم اخذ ميتفرومين (علاج سكر اقراص )قبل التحليل"
+            },
+            {
+                        "diagnosis": "اسهال مشاكل في البطن انتفاخ  مغص",
+                        "profile": "اضطرابات الجهاز الهضمي المزمنة - اضطرابات الجهاز الهضمي الحادة",
+                        "code": "7775p   -7773p",
+                        "upsell": "Schebo  test  /Stool ex And c/s.  /Biofire Stool by PCR /  Calprotectin/  H pylori Ag/ UBT",
+                        "scientific": "<b>Stool Biofire</b>  هو تحليل GIT pathogen Panel <div>*<b><i>GIT Pathogen Panel* </i></b><br>ده تحليل \"مزرعة وفحص شامل\" للبراز بيدور على كل الميكروبات اللي ممكن تعمل إسهال أو مغص أو مشاكل في البطن.<br><br>*بيكشف عن ايه؟*<br><br>التحليل ده بيغطي 3 حاجات في عينة براز واحدة:<br><br>*<b><i>1. بكتيريا Bacterial*</i></b><br>زي: <br>- *E.coli* بأنواعها <br>- *Salmonella*<br>- *Shigella* <br>- *Campylobacter*<br>- *C.diff* بتاعت المضادات الحيوية<br>- *H.pylori* في البراز<br><br><b><i>*2. فيروسات Viral*</i></b><br>زي:<br>- *Norovirus* <br>- *Rotavirus*<br>- *Adenovirus*<br><br>*<b><i>3. طفيليات Parasites*</i></b><br>زي:<br>- *Giardia*<br>- *Cryptosporidium*<br>- *Entamoeba histolytica* أميبا<br><br>*امتى الدكتور بيطلبه؟*<br><br>1.  *إسهال شديد* أكتر من 3 أيام ومش بيخف<br>2.  *إسهال مع دم أو مخاط*<br>3.  *مغص وتقلصات قوية + ترجيع*<br>4.  *إسهال بعد سفر* أو أكل من برا<br>5.  *اشتباه تسمم غذائي* <br>6.  *إسهال مزمن* عشان نستبعد طفيليات<br><br>*بيتعمل ازاي؟*<br>عينة براز في علبة معقمة. الأحسن متكونش واخدة مضاد حيوي قبلها بـ 48 ساعة.<br>النتيجة بتطلع خلال *24 - 48 ساعة*. في معامل بتعمله بـ PCR فـ بيطلع أسرع.<br><br>*الفرق بينه وبين مزرعة البراز العادية*<br>1.  *مزرعة عادية*: بتدور على بكتيريا بس وبتاخد 3 أيام<br>2.  *GIT Pathogen Panel*: بيدور على بكتيريا + فيروس + طفيلي مرة واحدة وبالـ DNA فـ أدق وأسرع<br><br>*لو طلع إيجابي؟*<br>الدكتور بيدي العلاج حسب اللي طلع:<br>بكتيريا = مضاد حيوي معين<br>طفيلي = فلاجيل أو حاجة أقوى<br>فيروس = سوايل وراحة بس</div>"
+            },
+            {
+                        "diagnosis": "ضغط عالي  احتباس سوايل في الجسم  تاريخ عائلي في الجلطات  متابعة علاج الكوليستيرول",
+                        "profile": "بروفايل لمتابعة الضغط المرتفع.  Cardiac profile fasting and non fasting",
+                        "code": "1117p - 52515p -  62616p",
+                        "upsell": "lipoprotien-a  urea AlT AST  HBA1c/ Uric acid /Extended lipid profile/  CBC /NA ,K ,  /Creat / Albumin /Creat ratio",
+                        "scientific": "<b><i>ليه بنطلب extended lipid profile بدل lipid profile العادي :<br>*Apo A1 و Apo B* </i></b><br>دول \"بروتينات\" لازقة في الدهون. فكر فيهم كده: الدهون مش بتمشي في الدم لوحدها، لازم تركب عربية اسمها بروتين.<br><br><b>*1. Apo B</b> - العربية الشريرة 😈*<br>*الوظيفة*: شايل كل الدهون الضارة LDL + VLDL + IDL<br>*مكانه*: في كل الدهون اللي بتترسب في الشرايين وتعمل جلطة<br><br>*ليه مهم؟*<br>1.  *أدق من الكوليسترول العادي*: ممكن LDL يطلع طبيعي بس Apo B عالي. يبقى لسه في خطر<br>2.  *كل عربية Apo B = حبة دهون واحدة* فـ عدده بيقولك كام \"رصاصة\" ماشية في شرايينك<br>3.  *لمرضى السكر مهم جداً*: السكر بيزود عدد Apo B الصغير اللي بيدخل جدار الشريان بسهولة<br><br>*المعدل الطبيعي*: أقل من 90 mg/dL. لو عندك سكر أو قلب يبقى أقل من 70<br><br><b>*2. Apo A1 </b>- العربية الكويسة 😇*<br>*الوظيفة*: شايل الدهون النافعة HDL <br>*مكانه*: في \"عربية النظافة\" اللي بتلف تلم الكوليسترول من الشرايين وترجعه للكبد<br><br>*ليه مهم؟*<br>1.  *بيحمي القلب*: كل ما كان عالي كل ما كان أحسن<br>2.  *بيقيس كفاءة الـ HDL*: مش مهم العدد، المهم هو شغال ولا لأ<br><br>*المعدل الطبيعي*: للرجالة &gt;120، للستات &gt;140 mg/dL<br><br><b>*أهم نسبة: Apo B / Apo A1*</b><br>دي أهم من الاتنين لوحدهم<br>- *أقل من 0.7* = ممتاز، خطر قليل<br>- *0.7 - 1.0* = متوسط <br>- *أكتر من 1.0* = خطر عالي لجلطات<br><br>يعني لو الشرير كتير والكويس قليل = مشكلة<br><br>*امتى الدكتور يطلبه؟*<br>1.  *مقاومة إنسولين أو سكر*: أدق من تحليل الدهون العادي<br>2.  *دهونك طبيعية بس عندك تاريخ عائلي للجلطات*<br>3.  *متابعة علاج الكوليسترول*: نشوف العلاج جاب نتيجة ولا لأ<br>4.  *ثبات الوزن + كرش*: علامة على لخبطة الدهون<br><br>*الفرق بينه وبين تحليل الدهون العادي*<br>\tتحليل الدهون العادي\tApo A1 / Apo B<br>**بيقيس**\tكمية الكوليسترول\tعدد \"العربيات\" اللي شايلة الكوليسترول<br>**الأدق**\tلأ\tأه، خصوصاً للسكر<br>*الخلاصة*: <br>Apo B = خطر الجلطة<br>Apo A1 = الحماية<br>النسبة بينهم = بتحدد خطرك الحقي"
+            },
+            {
+                        "diagnosis": "وجع صدر شديد نهجان مفاجيء عرق بارد دوخة تنميل في دراع واحد ضغط عالي سكر عالي",
+                        "profile": "Cardiovascular Risk profile",
+                        "code": "11129p - Cardiovascular risk profile.",
+                        "upsell": "HbA1c/CBC/ . extended lipid profile/. Homocystien/ Troponin I/ CK MB/ CK total/D-dimer",
+                        "scientific": "*<b>Cardio Vascular Disease </b>= أمراض القلب والأوعية الدموية CVD* <br>دي المجموعة اللي بتسبب الجلطات والسكتات. ودي السبب رقم 1 للوفاة في العالم.."
+            },
+            {
+                        "diagnosis": "تنميل. دوخة  نزول في الوزن. ارهاق وتعب العطش الشديد دخول الحمام المتكرر",
+                        "profile": "متابعة مضاعفات السكر",
+                        "code": "88887p",
+                        "upsell": "KF T. LF T CBC. HBA1c  FBS  TSH  Alb /creat Ratio. Extended Lipid profile",
+                        "scientific": "<b>*ميكروالبومين Microalbumin في البول* </b><br>ده أهم تحليل لمتابعة *مضاعفات السكر على الكلى* <br><br>*ليه بنعمله؟*<br><br>السكر العالي مع الوقت بيجرح \"فلتر\" الكلى اسمه الكبيبة Glomerulus.<br>أول حاجة بتتجرح هي الفلتر الصغير ده، فيبدأ يسرب بروتين اسمه *ألبومين Albumin* في البول.<br><br>المشكلة: الكمية صغيرة جداً في الأول اسمها *\"ميكرو\"* يعني مش بتبان في تحليل البول العادي.<br><br>لو لحقناها بدري نقدر نوقفها. لو سبناها = فشل كلوي.<br><br>*الميكروالبومين بيقولك ايه؟*<br>النتيجة\tالمعنى<br>**أقل من 30 mg/g**\tطبيعي. الكلى سليمة<br>**30 - 300 mg/g**\t**مرحلة أولى من تأثر الكلى بالسكر** Microalbuminuria. دي مرحلة انذار<br>**أكتر من 300 mg/g**\tتأثر شديد. خطر فشل كلوي<br>*أهم 3 أسباب بنعمله:*<br><br>1.  *نكشف بدري جداً* <br>    ممكن الكرياتينين ووظائف الكلى طبيعية، بس الميكروالبومين عالي. يبقى الكلى بدأت تتأثر<br><br>2.  *نشوف العلاج جايب نتيجة ولا لأ*<br>    لو بتاخدي *فورسيجا أو أدوية ضغط زي الكابوتن*، الدكتور بيطلب الميكروالبومين عشان يشوف بيحمي الكلى ولا لأ. المفروض يقل<br><br>3.  *عامل خطر للقلب*<br>    اللي عنده ميكروالبومين عالي معرض لجلطات القلب أكتر 2-3 أضعاف. فـ هو تحليل قلب وكلى مع بعض<br><br>*بيتعمل ازاي؟*<br>أحسن حاجة *عينة بول أول الصبح* أو *تجميع بول 24 ساعة*. <br>وممكن *نسبة Albumin/Creatinine Ratio ACR* في عينة عشوائية ودي الأدق.<br><br>*مهم تعرفي*<br>ممكن يعلى مؤقتاً لو: <br>سخونية، التهاب، مجهود عنيف، ضغط عالي، دم في البول<br>عشان كده لو طلع عالي بيتعاد بعد 3 شهور للتأكيد.<br><br>*الخلاصة*<br>*سكر تراكمي* = بيقيس السكر<br>*ميكروالبومين* = بيقيس هل السكر أثر على الكلى ولا لأ<br><br>عشان كده كل مريض سكر لازم يعمله *مرة كل سنة* حتى لو كل حاجة طبيعية."
+            },
+            {
+                        "diagnosis": "خمول وكسل عرق شديد خنقة ضربات قلب سريعة مزاج متقلب الم بالصدر  وجع في المفاصل",
+                        "profile": "بروفايل الغدة الدرقية\\. بروفايل السمنة المفرطة \\ الصداع المزمن \\ فحوصات السمنه",
+                        "code": "12023p/ 5555p /1122p",
+                        "upsell": "Anti thyroid AB. /TSH/ ft3/Ft4/ VitD",
+                        "scientific": "<b>*Anti Thyroid Ab = أجسام مضادة للغدة الدرقية*<br></b><br>ده تحليل بيشوف \"هل جسمك بيهاجم الغدة بتاعتك\" ولا لأ. <br>يعني بنشوف لو في مرض مناعي مش بس خمول أو نشاط.<br><br>*أهم نوعين بنقيسهم:*<br><br>*1. Anti-TPO = Anti Thyroid Peroxidase*<br>ده بتاع *هاشيموتو Hashimoto* <br>*النتيجة*: الغدة بتبقى خاملة مع الوقت. أشهر سبب للخمول في العالم.<br>Anti TRAB<br><br>ده بتاع *جريفز Graves* <br>*النتيجة*: الغدة بتنشط زيادة وبتعمل جحوظ ونبض سريع.<br><br>*أهمية التحليل:*<br><br>1.  *نعرف السبب مش بس النتيجة*<br>    ممكن TSH عالي = خمول. بس ليه؟ <br>    لو Anti-TPO عالي يبقى السبب مناعي \"هاشيموتو\" ولازم متابعة مدى الحياة<br><br>2.  *بيتوقع المستقبل*<br>    لو عندك خمول خفيف و Anti-TPO عالي = احتمال 80% هتقلبي خمول كامل خلال سنين. فـ لازم نتابع كل 6 شهور<br><br>3.  *مهم للحمل*<br>    لو Anti-TPO عالي حتى و TSH طبيعي، الحامل معرضة للإجهاض أو ولادة بدري. فـ الدكاترة بيتابعوه في الحمل<br><br>4.  *بيفسر ثبات الوزن والتعب*<br>    أمراض المناعة الذاتية بتقلل الحرق وتعمل تعب وتساقط شعر حتى لو TSH \"طبيعي بس على العالي\"<br><br>5.  *بيفرق بين أنواع الخمول*<br>    خمول مؤقت بعد ولادة أو فيروس = الأجسام المضادة سالبة<br>    خمول مناعي مزمن = الأجسام المضادة موجبة<br><br>*امتى الدكتور يطلبه؟*<br>1.  *TSH مش طبيعي* عشان يعرف السبب<br>2.  *تاريخ عائلي* لأمراض غدة أو مناعة <br>3.  *حامل أو بتخططي للحمل* وعندك خمول<br>4.  *ثبات وزن + تساقط شعر + برودة* رغم إن تحاليل الغدة \"طبيعية\"<br><br>*لو طلع عالي نعمل ايه؟*<br>مش ليه علاج يخليه يرجع سالب. بس معناه:<br>1.  متابعة TSH كل 6 شهور<br>2.  سيلينيوم وفيتامين D ساعات بيساعدوا يقللوا الهجوم<br>3.  لو قلب خمول هنبدأ التروكسين<br><br>*الخلاصة*<br>TSH بيقولك \"الغدة شغالة ولا لأ\"<br>Anti Thyroid Ab بيقولك \"ليه الغدة باظت وهل هتبوظ أكتر\""
+            },
+            {
+                        "diagnosis": "تيبس صباحي وتورم مفاصل   ألم شديد بإصبع القدم أو الركبة مع تورم مفاجئ    آلام عظام عامة وإرهاق",
+                        "profile": "الام المفاصل - الام العظام - هشاشة عظام",
+                        "code": "502p - 7772p -  5009p",
+                        "upsell": "ANA/ Anti- DNA/ Uric Acid/ Anti ccp/ ASOT/ RF/VIt D / PTH /ca/ Mg/ TSH /Cbc/ CRP",
+                        "scientific": "<b>PTH:</b> اربع غدد صغيرين قاعدين ورا الغدة الدرقية في الرقبة شغلتهم الاساسية ضبط <b>الكالسيوم في الدم </b><div><b>الكالسيوم ده بتاع العضم + الاعصاب + + القلب+ العضلات </b></div><div><b>لو الكالسيوم قل في الدم الPTH يطلع يعمل 3 حاجات</b></div><div><b>1- يسحب كالسيوم من العضم ويوديه الدم </b></div><div><b>2- بيخلي الكلي تمسك الكالسيوم وماتعملش بول</b></div><div><b>3-يشغل فيتامين د عشان الامعاء تمتص كالسيوم من الاكل</b></div><div><b><br></b></div><div><b>ANA: </b><span style=\"color: rgb(0, 0, 0); font-family: &quot;Segoe UI&quot;; font-size: 14px; white-space-collapse: collapse;\">للكشف عن أمراض المناعة الذاتية مثل الذئبة الحمراء</span></div>"
+            },
+            {
+                        "diagnosis": "تساقط شعر - حب شباب - غمقان في الجلد -توتر وقلة نوم- لخبطة في الهرمونات - عدم انتظام في البيريود",
+                        "profile": "PCO profile-   تحاليل خاصة بتساقط الشعر- فحوصات السمنة",
+                        "code": "281295p - 1127p - 2902p",
+                        "upsell": "/ AMHThyroid profile / CBC / Homa IR/ Testosterone total ,free/ DHEA-s\\ FSH/ LH/ PRL/E2/\\",
+                        "scientific": "<b>LH/ FSH</b> : في وجود تكيس المبايض نسبة LH بتكون اعلي من FSH ب 2-3 اضعاف <div>ده معناه ان المبيض مش عارف يبوض .</div><div><b>AMH:</b> بيبقي عالي جدا التكيس </div><div>بيقيس مخزون البويضات الصغيرة </div><div><b>80% من حالات التكيس سببها مقاومة انسولين حتي لو وزنك طبيعي </b></div><div><b>دهون كاملة + APoB:</b>  التكيس بيزود دهون الكبد وخطر القلب </div><div><br></div>"
+            }
+];
+
+        // ================= FIREBASE (عن طريق دالة وسيطة على كلاود فلير) =================
+        // البيانات لسه بتتخزن وبتتحفظ في نفس قاعدة فايربيز القديمة زي ما هي بالظبط.
+        // الفرق بس إن المتصفح بيكلم دومين الموقع (/api/labdata) بدل ما يكلم فايربيز مباشرة،
+        // عشان كده الموضوع بيشتغل حتى لو الشبكة بتحجب جوجل/فايربيز مباشرة.
+
+        let labDatabase = [];
+        let dataLoadedOnce = false;
+
+        function updateSyncStatus(message, color, bg) {
+            const el = document.getElementById('syncStatus');
+            if (!el) return;
+            el.textContent = message;
+            el.style.color = color;
+            el.style.backgroundColor = bg;
+        }
+
+        async function loadFromServer() {
+            try {
+                const res = await fetch('/api/labdata', { cache: 'no-store' });
+                if (!res.ok) {
+                    updateSyncStatus('🔴 خطأ من السيرفر: كود ' + res.status, '#991b1b', '#fee2e2');
+                    if (!dataLoadedOnce) {
+                        labDatabase = defaultDatabase;
+                        dataLoadedOnce = true;
+                        renderSearchResults();
+                    }
+                    return;
+                }
+                const data = await res.json();
+                if (data && Array.isArray(data) && data.length > 0) {
+                    labDatabase = data;
+                } else if (!dataLoadedOnce) {
+                    // أول مرة القاعدة فاضية: نرفع البيانات الأساسية عليها
+                    labDatabase = defaultDatabase;
+                    await saveToStorage();
+                }
+                dataLoadedOnce = true;
+                updateSyncStatus('🟢 متصل ومتزامن الآن (' + labDatabase.length + ' سجل)', '#166534', '#dcfce7');
+                renderSearchResults();
+                if (document.getElementById('adminView') && document.getElementById('adminView').classList.contains('active')) {
+                    renderAdminTable();
+                }
+            } catch (err) {
+                updateSyncStatus('🔴 تعذر الاتصال: ' + err.message, '#991b1b', '#fee2e2');
+                if (!dataLoadedOnce) {
+                    labDatabase = defaultDatabase;
+                    dataLoadedOnce = true;
+                    renderSearchResults();
+                }
+            }
+        }
+
+        // تحميل أولي، وبعدين مراجعة كل 4 ثواني لأي تحديث من أي جهاز تاني (مزامنة شبه فورية)
+        loadFromServer();
+        setInterval(loadFromServer, 4000);
+
+        function switchView(viewName) {
+            document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('adminAccessBtn').classList.remove('active');
+            
+            if(viewName === 'user') {
+                document.getElementById('userView').classList.add('active');
+                document.querySelectorAll('.nav-btn')[0].classList.add('active');
+                renderSearchResults(); 
+            } else if(viewName === 'admin') {
+                document.getElementById('adminView').classList.add('active');
+                document.getElementById('adminAccessBtn').classList.add('active');
+                renderAdminTable();
+            }
+        }
+
+        function checkAdminAuth() {
+            document.getElementById('authModal').classList.remove('hidden');
+            document.getElementById('adminPassword').focus();
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('adminPassword').value = '';
+        }
+
+        function verifyAdminPassword() {
+            const pass = document.getElementById('adminPassword').value;
+            // التحقق من كلمة المرور المطلوبة بدقة
+            if(pass === '123456##') { 
+                closeAuthModal();
+                switchView('admin');
+            } else {
+                alert('عذراً، كلمة المرور غير صحيحة. لا تملك صلاحية الدخول لصفحة الإدارة.');
+                document.getElementById('adminPassword').value = '';
+            }
+        }
+
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', renderSearchResults);
+
+        function renderSearchResults() {
+            const query = searchInput.value.trim().toLowerCase();
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '';
+
+            if(!query) {
+                const countElH = document.getElementById('resultsCount');
+                if(countElH) countElH.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+
+            const filtered = labDatabase.filter(item => 
+                item.diagnosis.toLowerCase().includes(query) || 
+                item.profile.toLowerCase().includes(query)
+            );
+
+            if(filtered.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--danger); font-weight: bold; padding: 30px; background: white; border-radius: 10px; border: 1px dashed #fca5a5;">لم يتم العثور على تشخيص مطابق. يرجى مراجعة الاسم أو إضافته من لوحة الإدارة.</p>';
+                return;
+            }
+
+            // عداد النتائج
+            const countEl = document.getElementById('resultsCount');
+            const numEl = document.getElementById('resultsNumber');
+            if(countEl && numEl) {
+                countEl.style.display = 'block';
+                numEl.textContent = filtered.length;
+            }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="diagnosis-title">📋 ${item.diagnosis}</span>
+                        <span class="profile-badge">💎 ${item.profile}</span>
+                    </div>
+                    <div class="code-actions">
+                        ${formatCodeButtons(item.code)}
+                    </div>
+                    <div class="info-block">
+                        <div class="info-label">🚀 الفحوصات الإضافية الموصى بها (Upselling):</div>
+                        <div class="info-value upsell-box">${formatUpsellChips(item.upsell)}</div>
+                    </div>
+                    <div class="info-block" style="margin-bottom:0;">
+                        <div class="info-label">💡 التوجيه والجانب العلمي للمريض:</div>
+                        <div class="info-value scientific-box">${item.scientific}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // تقسيم قائمة الفحوصات الإضافية إلى شرائح منفصلة بمسافات واضحة بينها
+        function formatUpsellChips(str) {
+            if(!str) return '';
+            let parts;
+            if(str.includes(',')) {
+                parts = str.split(',');
+            } else if(str.includes('  ')) {
+                // في حالة الفصل بمسافتين أو أكتر بين كل فحص
+                parts = str.split(/\s{2,}/);
+            } else {
+                parts = str.split(/\s+/);
+            }
+            return parts
+                .map(p => p.trim())
+                .filter(Boolean)
+                .map(p => `<span class="test-chip">${p}</span>`)
+                .join('');
+        }
+
+        // تقسيم كود/أكواد البروفايل (مهما كانت الفواصل بينهم) لزرار نسخ مستقل لكل كود
+        function formatCodeButtons(codeStr) {
+            if(!codeStr || !codeStr.trim()) {
+                return '<span class="no-code-label">🏷️ لا يوجد كود مسجل</span>';
+            }
+            const codes = codeStr
+                .split(/[,\-\/\s]+/)
+                .map(c => c.trim())
+                .filter(Boolean);
+
+            return codes.map(c => {
+                const safe = c.replace(/'/g, "\\'");
+                return `<button class="code-chip-btn" onclick="copyProfileCode(this, '${safe}')" title="نسخ ${c}">🏷️ ${c} 📋</button>`;
+            }).join('');
+        }
+
+        function copyProfileCode(btn, code) {
+            if(!code) {
+                alert('لا يوجد كود مسجل لهذا البروفايل، يمكن إضافته من صفحة التطوير.');
+                return;
+            }
+
+            const showSuccess = () => {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ تم النسخ';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('copied');
+                }, 1500);
+            };
+
+            const fallbackCopy = () => {
+                try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = code;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    textarea.style.left = '-9999px';
+                    document.body.appendChild(textarea);
+                    textarea.focus();
+                    textarea.select();
+                    const success = document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    if(success) {
+                        showSuccess();
+                    } else {
+                        alert('تعذر نسخ الكود تلقائياً، الكود هو: ' + code);
+                    }
+                } catch(err) {
+                    alert('تعذر نسخ الكود تلقائياً، الكود هو: ' + code);
+                }
+            };
+
+            // في الصفحات المفتوحة محلياً (content:// أو file://) لا يعمل Clipboard API الحديث
+            // لذلك نستخدم الطريقة الاحتياطية مباشرة كبديل أضمن
+            if(navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(code).then(showSuccess).catch(fallbackCopy);
+            } else {
+                fallbackCopy();
+            }
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('adminTableBody');
+            tbody.innerHTML = '';
+            document.getElementById('recordCount').innerText = labDatabase.length;
+
+            labDatabase.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:700; color: var(--primary-dark);">${item.diagnosis}</td>
+                    <td>${item.profile}</td>
+                    <td style="font-family:'Courier New', monospace; font-weight:700;">${item.code ? item.code : '—'}</td>
+                    <td class="actions-cell">
+                        <button class="action-btn edit" onclick="editRecord(${index})">تعديل</button>
+                        <button class="action-btn delete" onclick="deleteRecord(${index})">حذف</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // تنفيذ أوامر التنسيق (غامق/مائل/لون...) على محرر الجانب العلمي
+        function formatSci(command, value = null) {
+            const editor = document.getElementById('scientific');
+            editor.focus();
+            document.execCommand(command, false, value);
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const diag = document.getElementById('diagnosis').value.trim();
+            const prof = document.getElementById('profile').value.trim();
+            const code = document.getElementById('code').value.trim();
+            const ups = document.getElementById('upsell').value.trim();
+            const sciEditor = document.getElementById('scientific');
+            const sci = sciEditor.innerHTML.trim();
+            const editIdx = document.getElementById('editIndex').value;
+
+            if(sciEditor.textContent.trim() === '') {
+                alert('من فضلك اكتب الجانب العلمي والتبرير الطبي.');
+                sciEditor.focus();
+                return;
+            }
+
+            const recordData = { diagnosis: diag, profile: prof, code: code, upsell: ups, scientific: sci };
+
+            if(editIdx !== "") {
+                labDatabase[parseInt(editIdx)] = recordData;
+            } else {
+                const exists = labDatabase.findIndex(item => item.diagnosis.toLowerCase() === diag.toLowerCase());
+                if(exists >= 0) {
+                    if(confirm('هذا التشخيص موجود بالفعل! هل تريد تحديث بياناته؟')) {
+                        labDatabase[exists] = recordData;
+                    } else {
+                        return;
+                    }
+                } else {
+                    labDatabase.push(recordData);
+                }
+            }
+
+            saveToStorage();
+            resetForm();
+            renderAdminTable();
+        }
+
+        function editRecord(index) {
+            const item = labDatabase[index];
+            document.getElementById('diagnosis').value = item.diagnosis;
+            document.getElementById('profile').value = item.profile;
+            document.getElementById('code').value = item.code || '';
+            document.getElementById('upsell').value = item.upsell;
+
+            // البيانات القديمة كانت نص عادي بفواصل أسطر (\n)، نحولها لفقرات HTML عشان تظهر صح في المحرر
+            let sciContent = item.scientific || '';
+            const isAlreadyHTML = /<[a-z][\s\S]*>/i.test(sciContent);
+            if(!isAlreadyHTML) {
+                sciContent = sciContent.replace(/\n/g, '<br>');
+            }
+            document.getElementById('scientific').innerHTML = sciContent;
+
+            document.getElementById('editIndex').value = index;
+            document.getElementById('submitBtn').innerText = "تحديث السجل";
+            document.getElementById('diagnosis').focus();
+        }
+
+        function deleteRecord(index) {
+            if(confirm('هل أنت متأكد من حذف هذا التشخيص نهائياً؟')) {
+                labDatabase.splice(index, 1);
+                saveToStorage();
+                renderAdminTable();
+            }
+        }
+
+        function clearDuplicates() {
+            const unique = [];
+            const seen = new Set();
+            let clearedCount = 0;
+
+            labDatabase.forEach(item => {
+                const key = item.diagnosis.toLowerCase().trim();
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    unique.push(item);
+                } else {
+                    clearedCount++;
+                }
+            });
+
+            if(clearedCount === 0) {
+                alert('قاعدة البيانات نظيفة تماماً ولا يوجد أي تكرار!');
+                return;
+            }
+
+            if(confirm(`تم العثور على ${clearedCount} سجلات مكررة. هل تريد حذفها والإبقاء على نسخة واحدة؟`)) {
+                labDatabase = unique;
+                saveToStorage();
+                renderAdminTable();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('dataForm').reset();
+            document.getElementById('scientific').innerHTML = '';
+            document.getElementById('editIndex').value = "";
+            document.getElementById('submitBtn').innerText = "حفظ المدخلات";
+        }
+
+        async function saveToStorage() {
+            try {
+                await fetch('/api/labdata', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(labDatabase)
+                });
+            } catch (err) {
+                console.error('تعذر حفظ البيانات:', err);
+            }
+        }
+
+        // ===== DARK MODE =====
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            document.getElementById('darkToggleBtn').textContent = isDark ? '☀️' : '🌙';
+            localStorage.setItem('alfa_dark_mode', isDark ? '1' : '0');
+        }
+        // تحميل الوضع المحفوظ
+        if(localStorage.getItem('alfa_dark_mode') === '1') {
+            document.body.classList.add('dark-mode');
+            document.addEventListener('DOMContentLoaded', () => {
+                const btn = document.getElementById('darkToggleBtn');
+                if(btn) btn.textContent = '☀️';
+            });
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(labDatabase, null, 4));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "Alfa_Lab_Database.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if(Array.isArray(imported)) {
+                        if(confirm('هل تريد دمج البيانات المستوردة مع النظام الحالي؟\n(أي بروفايل بنفس التشخيص هيتحدّث، وأي بروفايل جديد هيتضاف من غير تكرار)')) {
+                            let updatedCount = 0;
+                            let addedCount = 0;
+                            imported.forEach(newItem => {
+                                const idx = labDatabase.findIndex(existing => existing.diagnosis === newItem.diagnosis);
+                                if(idx !== -1) {
+                                    labDatabase[idx] = newItem;
+                                    updatedCount++;
+                                } else {
+                                    labDatabase.push(newItem);
+                                    addedCount++;
+                                }
+                            });
+                            saveToStorage();
+                            renderAdminTable();
+                            alert('تم الدمج بنجاح ✅\nتحديث: ' + updatedCount + ' سجل\nإضافة جديد: ' + addedCount + ' سجل');
+                        }
+                    } else {
+                        alert('صيغة الملف غير صالحة.');
+                    }
+                } catch(err) {
+                    alert('فشل قراءة الملف.');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+    </script>
+</body>
+</html>
